@@ -142,6 +142,17 @@
       document.documentElement.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
     }
 
+    // Set initial theme based on system preference
+    window.onload = () => {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    };
+
+    // Listen for system preference changes and update theme dynamically
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    });
+
     function calculate() {
       const buy = parseFloat(document.getElementById('buyPrice').value);
       const sell = parseFloat(document.getElementById('sellPrice').value);
