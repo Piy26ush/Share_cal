@@ -95,11 +95,6 @@
       border: 1px solid #ccc;
     }
 
-    .theme-toggle {
-      text-align: center;
-      margin-bottom: 15px;
-    }
-
     @media (max-width: 480px) {
       .calculator {
         padding: 20px;
@@ -114,9 +109,6 @@
 <body>
   <div class="calculator" id="app">
     <h1>📈 Stock Profit Calculator</h1>
-    <div class="theme-toggle">
-      <button onclick="toggleTheme()">🌙 Toggle Dark Mode</button>
-    </div>
     <label>Buy Price: <input type="number" id="buyPrice" /></label>
     <label>Sell Price: <input type="number" id="sellPrice" /></label>
     <label>Quantity: <input type="number" id="quantity" /></label>
@@ -137,11 +129,6 @@
   </div>
 
   <script>
-    function toggleTheme() {
-      const current = document.documentElement.getAttribute('data-theme');
-      document.documentElement.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-    }
-
     // Set initial theme based on system preference
     window.onload = () => {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
