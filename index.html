@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stock Profit Calculator with Portfolio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stock Profit Portfolio Tracker</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -32,11 +32,9 @@
       background: var(--bg-color);
       color: var(--text-color);
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: center;
       min-height: 100vh;
-      padding: 20px;
     }
     .calculator {
       background: var(--secondary-bg);
@@ -44,8 +42,7 @@
       border-radius: 12px;
       box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
       width: 90%;
-      max-width: 400px;
-      margin-bottom: 30px;
+      max-width: 700px;
     }
     h1 {
       font-size: 22px;
@@ -59,9 +56,7 @@
       margin-top: 15px;
       display: block;
     }
-    input,
-    select,
-    button {
+    input, select, button {
       width: 100%;
       padding: 10px;
       margin-top: 5px;
@@ -82,62 +77,51 @@
     button:hover {
       background-color: var(--button-hover);
     }
-    .output {
-      background: var(--bg-color);
-      padding: 15px;
-      border-radius: 8px;
-      margin-top: 15px;
-      border: 1px solid #ccc;
-      min-height: 60px;
-    }
-    .portfolio {
-      background: var(--secondary-bg);
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-      width: 90%;
-      max-width: 600px;
-    }
-    .portfolio h2 {
-      color: var(--primary-color);
-      margin-bottom: 15px;
-      text-align: center;
-    }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 10px;
+      margin-top: 20px;
     }
-    th,
-    td {
+    th, td {
       border: 1px solid #ccc;
-      padding: 8px;
+      padding: 10px;
       text-align: center;
     }
     th {
-      background: var(--button-bg);
+      background-color: var(--primary-color);
       color: white;
     }
-    .no-data {
-      text-align: center;
-      padding: 15px;
-      color: #666;
+    .remove-btn {
+      background-color: #d9534f;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
     }
-    @media (max-width: 480px) {
-      .calculator,
-      .portfolio {
-        padding: 20px;
-      }
-      h1 {
-        font-size: 18px;
-      }
+    .remove-btn:hover {
+      background-color: #c9302c;
+    }
+    .total-profit {
+      margin-top: 20px;
+      font-weight: 700;
+      font-size: 18px;
+      text-align: right;
+      color: var(--primary-color);
+    }
+    #result {
+      margin-top: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary-color);
     }
   </style>
 </head>
 <body>
   <div class="calculator" id="app">
-    <h1>📈 Stock Profit Calculator</h1>
+    <h1>📈 Stock Profit Portfolio Tracker</h1>
 
+    <label>Stock Symbol: <input type="text" id="symbol" placeholder="e.g. TCS" /></label>
     <label>Buy Price: <input type="number" id="buyPrice" /></label>
     <label>Sell Price: <input type="number" id="sellPrice" /></label>
     <label>Quantity: <input type="number" id="quantity" /></label>
@@ -155,151 +139,180 @@
     </label>
 
     <button onclick="calculate()">Calculate</button>
-    <div class="output" id="result"></div>
-    <button id="addPortfolioBtn" style="display:none;" onclick="addToPortfolio()">Add to Portfolio</button>
-  </div>
+    <button onclick="addToPortfolio()">Add to Portfolio</button>
 
-  <div class="portfolio" id="portfolioSection" style="display:none;">
-    <h2>📋 Your Portfolio</h2>
-    <table id="portfolioTable">
+    <div id="result"></div>
+
+    <table id="portfolioTable" style="display:none;">
       <thead>
         <tr>
+          <th>Symbol</th>
           <th>Buy Price</th>
           <th>Sell Price</th>
           <th>Quantity</th>
           <th>Broker</th>
           <th>Trade Type</th>
+          <th>Gross P&L (₹)</th>
+          <th>Total Charges (₹)</th>
           <th>Net P&L (₹)</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody id="portfolioBody"></tbody>
     </table>
-    <div class="no-data" id="noPortfolio">No trades added yet.</div>
-    <button onclick="clearPortfolio()">Clear Portfolio</button>
+
+    <div class="total-profit" id="totalProfit" style="display:none;"></div>
   </div>
 
-  <script>
-    // Set theme based on user's OS/browser preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.documentElement.setAttribute('data-theme', 'dark');
+<script>
+  const portfolioKey = 'stockPortfolio';
+
+  let portfolio = JSON.parse(localStorage.getItem(portfolioKey)) || [];
+  let lastCalc = null;
+
+  function calculatePL(trade) {
+    const {buyPrice, sellPrice, quantity, broker, tradeType} = trade;
+
+    const buyValue = buyPrice * quantity;
+    const sellValue = sellPrice * quantity;
+    const turnover = buyValue + sellValue;
+    const grossPL = sellValue - buyValue;
+
+    let brokerage = 0;
+    let stt = 0;
+    let exchTxn = 0.0000345 * turnover;
+    let sebi = 0.000001 * turnover;
+    let gst = 0;
+    let stampDuty = 0;
+    let dpCharge = 0;
+
+    if (tradeType === 'intraday') {
+      brokerage = Math.min(20, 0.0003 * turnover);
+      stt = 0.00025 * turnover;
+      stampDuty = 0.00003 * buyValue;
     } else {
-      document.documentElement.setAttribute('data-theme', 'light');
+      brokerage = 0;
+      stt = 0.001 * sellValue;
+      stampDuty = 0.00015 * buyValue;
+      dpCharge = 13.5;
     }
 
-    let currentTrade = null;
+    gst = 0.18 * (brokerage + exchTxn);
+    const totalCharges = brokerage + stt + exchTxn + sebi + gst + stampDuty + dpCharge;
+    const netPL = grossPL - totalCharges;
 
-    function calculate() {
-      const buy = parseFloat(document.getElementById('buyPrice').value);
-      const sell = parseFloat(document.getElementById('sellPrice').value);
-      const qty = parseInt(document.getElementById('quantity').value);
-      const broker = document.getElementById('broker').value;
-      const tradeType = document.getElementById('tradeType').value;
+    return { grossPL, totalCharges, netPL };
+  }
 
-      if (isNaN(buy) || isNaN(sell) || isNaN(qty) || qty <= 0) {
-        alert('Please enter valid buy price, sell price and quantity.');
-        return;
-      }
+  function formatProfitLoss(value) {
+    if (value > 0) return `Profit of ₹${value.toFixed(2)}`;
+    else if (value < 0) return `Loss of ₹${Math.abs(value).toFixed(2)}`;
+    else return `No profit, no loss`;
+  }
 
-      const buyValue = buy * qty;
-      const sellValue = sell * qty;
-      const turnover = buyValue + sellValue;
-      const grossPL = sellValue - buyValue;
+  function calculate() {
+    const symbol = document.getElementById('symbol').value.trim();
+    const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+    const sellPrice = parseFloat(document.getElementById('sellPrice').value);
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const broker = document.getElementById('broker').value;
+    const tradeType = document.getElementById('tradeType').value;
 
-      let brokerage = 0;
-      let stt = 0;
-      let exchTxn = 0.0000345 * turnover;
-      let sebi = 0.000001 * turnover;
-      let gst = 0;
-      let stampDuty = 0;
-      let dpCharge = 0;
+    if (!symbol || isNaN(buyPrice) || isNaN(sellPrice) || isNaN(quantity)) {
+      alert('Please fill all fields correctly before calculating.');
+      return;
+    }
 
-      if (tradeType === 'intraday') {
-        brokerage = Math.min(20, 0.0003 * turnover);
-        stt = 0.00025 * turnover;
-        stampDuty = 0.00003 * buyValue;
-      } else {
-        brokerage = 0;
-        stt = 0.001 * sellValue;
-        stampDuty = 0.00015 * buyValue;
-        dpCharge = 13.5;
-      }
+    if (buyPrice <= 0 || sellPrice <= 0 || quantity <= 0) {
+      alert('Buy price, Sell price and Quantity must be positive numbers.');
+      return;
+    }
 
-      gst = 0.18 * (brokerage + exchTxn);
-      const totalCharges = brokerage + stt + exchTxn + sebi + gst + stampDuty + dpCharge;
-      const netPLRaw = grossPL - totalCharges;
+    const trade = {symbol, buyPrice, sellPrice, quantity, broker, tradeType};
+    const {grossPL, totalCharges, netPL} = calculatePL(trade);
+    lastCalc = trade;
 
-      const netPL = Math.abs(netPLRaw).toFixed(2);
-      const profitOrLoss = netPLRaw >= 0 ? 'Profit' : 'Loss';
+    const resDiv = document.getElementById('result');
+    resDiv.innerHTML = `
+      <div>Gross P&L: ${formatProfitLoss(grossPL)}</div>
+      <div>Total Charges: ₹${totalCharges.toFixed(2)}</div>
+      <div><strong>Net P&L: ${formatProfitLoss(netPL)}</strong></div>
+      <div style="margin-top:10px; font-size:14px; color:#666;">Now click "Add to Portfolio" to save this trade.</div>
+    `;
+  }
 
-      document.getElementById('result').innerHTML = `
-        <strong>Gross P&L:</strong> ₹${Math.abs(grossPL).toFixed(2)}<br>
-        <strong>Total Charges:</strong> ₹${totalCharges.toFixed(2)}<br>
-        <strong>Net ${profitOrLoss}:</strong> ₹${netPL}
+  function renderPortfolio() {
+    const tbody = document.getElementById('portfolioBody');
+    tbody.innerHTML = '';
+
+    if (portfolio.length === 0) {
+      document.getElementById('portfolioTable').style.display = 'none';
+      document.getElementById('totalProfit').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('portfolioTable').style.display = 'table';
+    document.getElementById('totalProfit').style.display = 'block';
+
+    let totalNetPL = 0;
+
+    portfolio.forEach((trade, index) => {
+      const {grossPL, totalCharges, netPL} = calculatePL(trade);
+      totalNetPL += netPL;
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${trade.symbol.toUpperCase()}</td>
+        <td>₹${trade.buyPrice.toFixed(2)}</td>
+        <td>₹${trade.sellPrice.toFixed(2)}</td>
+        <td>${trade.quantity}</td>
+        <td>${trade.broker}</td>
+        <td>${trade.tradeType}</td>
+        <td>₹${grossPL.toFixed(2)}</td>
+        <td>₹${totalCharges.toFixed(2)}</td>
+        <td>₹${netPL.toFixed(2)}</td>
+        <td><button class="remove-btn" onclick="removeFromPortfolio(${index})">Remove</button></td>
       `;
+      tbody.appendChild(row);
+    });
 
-      currentTrade = {
-        buy, sell, qty, broker, tradeType, netPL: netPLRaw
-      };
+    document.getElementById('totalProfit').innerHTML = `Total Net P&L: ₹${totalNetPL.toFixed(2)}`;
+  }
 
-      document.getElementById('addPortfolioBtn').style.display = 'block';
+  function addToPortfolio() {
+    if (!lastCalc) {
+      alert('Please calculate the profit/loss first before adding to portfolio.');
+      return;
     }
 
-    function addToPortfolio() {
-      if (!currentTrade) return;
-
-      let portfolio = JSON.parse(localStorage.getItem('portfolio')) || [];
-      portfolio.push(currentTrade);
-      localStorage.setItem('portfolio', JSON.stringify(portfolio));
-      currentTrade = null;
-
-      document.getElementById('addPortfolioBtn').style.display = 'none';
-      document.getElementById('result').innerHTML = '';
-      document.getElementById('buyPrice').value = '';
-      document.getElementById('sellPrice').value = '';
-      document.getElementById('quantity').value = '';
-
-      renderPortfolio();
-    }
-
-    function renderPortfolio() {
-      const portfolio = JSON.parse(localStorage.getItem('portfolio')) || [];
-      const tbody = document.getElementById('portfolioBody');
-      const noData = document.getElementById('noPortfolio');
-      const portfolioSection = document.getElementById('portfolioSection');
-
-      if (portfolio.length === 0) {
-        portfolioSection.style.display = 'none';
-        return;
-      }
-
-      portfolioSection.style.display = 'block';
-      tbody.innerHTML = '';
-
-      portfolio.forEach((trade, index) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>₹${trade.buy.toFixed(2)}</td>
-          <td>₹${trade.sell.toFixed(2)}</td>
-          <td>${trade.qty}</td>
-          <td>${trade.broker}</td>
-          <td>${trade.tradeType}</td>
-          <td>${trade.netPL >= 0 ? 'Profit' : 'Loss'} ₹${Math.abs(trade.netPL).toFixed(2)}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      noData.style.display = 'none';
-    }
-
-    function clearPortfolio() {
-      if (confirm('Are you sure you want to clear your portfolio?')) {
-        localStorage.removeItem('portfolio');
-        renderPortfolio();
-      }
-    }
-
-    // Render portfolio on page load
+    portfolio.push(lastCalc);
+    localStorage.setItem(portfolioKey, JSON.stringify(portfolio));
     renderPortfolio();
-  </script>
+
+    // Clear inputs and result
+    document.getElementById('symbol').value = '';
+    document.getElementById('buyPrice').value = '';
+    document.getElementById('sellPrice').value = '';
+    document.getElementById('quantity').value = '';
+    document.getElementById('result').innerHTML = '';
+    lastCalc = null;
+  }
+
+  function removeFromPortfolio(index) {
+    portfolio.splice(index, 1);
+    localStorage.setItem(portfolioKey, JSON.stringify(portfolio));
+    renderPortfolio();
+  }
+
+  // Detect and apply dark mode on page load based on user preference
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+
+  // Initial render
+  renderPortfolio();
+</script>
 </body>
 </html>
