@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock Profit Calculator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #333333;
+      --primary-color: #007ea7;
+      --secondary-bg: #f1f1f1;
+      --button-bg: #007ea7;
+      --button-hover: #005f73;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #121212;
+      --text-color: #ffffff;
+      --primary-color: #00bcd4;
+      --secondary-bg: #1e1e1e;
+      --button-bg: #00bcd4;
+      --button-hover: #008c9e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .calculator {
+      background: var(--secondary-bg);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 400px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-align: center;
+      color: var(--primary-color);
+    }
+
+    label {
+      font-weight: 600;
+      margin-top: 15px;
+      display: block;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+    }
+
+    button {
+      background-color: var(--button-bg);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: var(--button-hover);
+    }
+
+    .output {
+      background: var(--bg-color);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border: 1px solid #ccc;
+    }
+
+    .theme-toggle {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    @media (max-width: 480px) {
+      .calculator {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator" id="app">
+    <h1>📈 Stock Profit Calculator</h1>
+    <div class="theme-toggle">
+      <button onclick="toggleTheme()">🌙 Toggle Dark Mode</button>
+    </div>
+    <label>Buy Price: <input type="number" id="buyPrice" /></label>
+    <label>Sell Price: <input type="number" id="sellPrice" /></label>
+    <label>Quantity: <input type="number" id="quantity" /></label>
+    <label>Broker:
+      <select id="broker">
+        <option value="groww">Groww</option>
+        <option value="angel">Angel One</option>
+      </select>
+    </label>
+    <label>Trade Type:
+      <select id="tradeType">
+        <option value="delivery">Delivery</option>
+        <option value="intraday">Intraday</option>
+      </select>
+    </label>
+    <button onclick="calculate()">Calculate</button>
+    <div class="output" id="result"></div>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      document.documentElement.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+    }
+
+    function calculate() {
+      const buy = parseFloat(document.getElementById('buyPrice').value);
+      const sell = parseFloat(document.getElementById('sellPrice').value);
+      const qty = parseInt(document.getElementById('quantity').value);
+      const broker = document.getElementById('broker').value;
+      const tradeType = document.getElementById('tradeType').value;
+
+      const buyValue = buy * qty;
+      const sellValue = sell * qty;
+      const turnover = buyValue + sellValue;
+      const grossPL = sellValue - buyValue;
+
+      let brokerage = 0;
+      let stt = 0;
+      let exchTxn = 0.0000345 * turnover;
+      let sebi = 0.000001 * turnover;
+      let gst = 0;
+      let stampDuty = 0;
+      let dpCharge = 0;
+
+      // Brokerage Logic
+      if (tradeType === 'intraday') {
+        brokerage = Math.min(20, 0.0003 * turnover);
+        stt = 0.00025 * turnover;
+        stampDuty = 0.00003 * buyValue;
+      } else {
+        brokerage = 0;
+        stt = 0.001 * sellValue;
+        stampDuty = 0.00015 * buyValue;
+        dpCharge = 13.5;
+      }
+
+      gst = 0.18 * (brokerage + exchTxn);
+      const totalCharges = brokerage + stt + exchTxn + sebi + gst + stampDuty + dpCharge;
+      const netPL = grossPL - totalCharges;
+
+      document.getElementById('result').innerHTML = `
+        <strong>Gross P&L:</strong> ₹${grossPL.toFixed(2)}<br>
+        <strong>Total Charges:</strong> ₹${totalCharges.toFixed(2)}<br>
+        <strong>Net P&L:</strong> ₹${netPL.toFixed(2)}
+      `;
+    }
+  </script>
+</body>
+</html>
